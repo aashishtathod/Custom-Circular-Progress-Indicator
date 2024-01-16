@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="MyCustomView">
+        <attr name="success_step_color" format="color"/>
+        <attr name="failure_step_color" format="color"/>
+        <attr name="pending_step_color" format="color"/>
+        <attr name="gap_between_steps" format="dimension" />
+        <attr name="step_thickness" format="dimension" />
+    </declare-styleable>
+
+</resources>
