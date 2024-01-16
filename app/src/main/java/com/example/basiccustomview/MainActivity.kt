@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         binding.temp.postDelayed({
-            binding.temp.setdata(10, 5, 3)
+            binding.temp.setData(10, 5, 3)
         }, 3000)
 
     }

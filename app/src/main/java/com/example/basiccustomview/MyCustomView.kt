@@ -1,5 +1,6 @@
 package com.example.basiccustomview
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Resources
 import android.content.res.TypedArray
@@ -21,38 +22,49 @@ class MyCustomView @JvmOverloads constructor(
     context: Context, attributeSet: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attributeSet, defStyleAttr) {
 
+    companion object{
+        const val DEFAULT_STEP_SUCCESS_COLOR = "#67D39D"
+        const val DEFAULT_STEP_FAILED_COLOR = "#EB6A6E"
+        const val DEFAULT_STEP_PENDING_COLOR = "#3E3953"
+        const val DEFAULT_TOTAL_STEPS = 12
+        const val DEFAULT_SUCCESS_STEPS = 2
+        const val DEFAULT_FAILED_STEPS = 2
+        const val DEFAULT_GAP_BETWEEN_STEPS = 0.8f
+        const val DEFAULT_STEP_THICKNESS = 10f
+    }
+
     private var stepStrokeType = Paint.Cap.BUTT
-    private var stepThickness = 10f.dp
+    private var stepThickness = DEFAULT_STEP_THICKNESS.dp
 
-    private var stepSuccessColor = Color.parseColor("#67D39D")
-    private var stepFailureColor = Color.parseColor("#EB6A6E")
-    private var stepPendingColor = Color.parseColor("#3E3953")
+    private var stepSuccessColor = DEFAULT_STEP_SUCCESS_COLOR.toColorInt()
+    private var stepFailureColor = DEFAULT_STEP_FAILED_COLOR.toColorInt()
+    private var stepPendingColor = DEFAULT_STEP_PENDING_COLOR.toColorInt()
 
-    private var totalSteps = 5
-    private var successfullSteps = 2
-    private var failedSteps = 1
+    private var totalSteps = DEFAULT_TOTAL_STEPS
+    private var successfulSteps = DEFAULT_SUCCESS_STEPS
+    private var failedSteps = DEFAULT_FAILED_STEPS
     private var pendingSteps = calculatePendingSteps()
 
-    private var gapBetweenEachEMI = 1.dp
-    private var widthOfEachStep = (360f / totalSteps) - gapBetweenEachEMI
+    private var gapBetweenEachStep = DEFAULT_GAP_BETWEEN_STEPS.dp
+    private var widthOfEachStep = calculateWidthOfEachStep()
 
     private val rectF = RectF()
 
-    val stepSuccessfullPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val stepSuccessfulPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = stepSuccessColor
         strokeWidth = stepThickness
         strokeCap = stepStrokeType
     }
 
-    val stepFailedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val stepFailedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = stepFailureColor
         strokeWidth = stepThickness
         strokeCap = stepStrokeType
     }
 
-    val stepPendingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val stepPendingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         color = stepPendingColor
         strokeWidth = stepThickness
@@ -76,35 +88,35 @@ class MyCustomView @JvmOverloads constructor(
             stepSuccessColor =
                 getColor(
                     R.styleable.MyCustomView_success_step_color,
-                    Color.parseColor("#67D39D")
+                    DEFAULT_STEP_SUCCESS_COLOR.toColorInt()
                 )
 
             stepFailureColor =
                 getColor(
                     R.styleable.MyCustomView_failure_step_color,
-                    Color.parseColor("#EB6A6E")
+                    DEFAULT_STEP_FAILED_COLOR.toColorInt()
                 )
 
             stepPendingColor = getColor(
                 R.styleable.MyCustomView_pending_step_color,
-                Color.parseColor("#3E3953")
+                DEFAULT_STEP_PENDING_COLOR.toColorInt()
             )
 
-            gapBetweenEachEMI = getDimension(
+            gapBetweenEachStep = getDimension(
                 R.styleable.MyCustomView_gap_between_steps,
-                1f.dp
-            ).toInt()
+                DEFAULT_GAP_BETWEEN_STEPS.dp
+            )
 
             stepThickness = getDimension(
                 R.styleable.MyCustomView_step_thickness,
-                10f.dp
+                DEFAULT_STEP_THICKNESS.dp
             )
 
         }
     }
 
     private fun setValues() {
-        stepSuccessfullPaint.apply {
+        stepSuccessfulPaint.apply {
             color = stepSuccessColor
             strokeWidth = stepThickness
         }
@@ -120,10 +132,9 @@ class MyCustomView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        Log.e("MyCoustomView","can was drawn $totalSteps")
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = (width - stepThickness) / 2f - 10f
+        val radius = ((width - stepThickness) / 2f) - 10f
 
         rectF.set(
             centerX - radius,
@@ -136,28 +147,43 @@ class MyCustomView @JvmOverloads constructor(
 
         for (i in 0..<totalSteps) {
 
-            val paint = when (getStatus(successfullSteps, failedSteps, i)) {
-                State.SUCCESS -> stepSuccessfullPaint
+            val paint = when (getStatus(successfulSteps, failedSteps, i)) {
+                State.SUCCESS -> stepSuccessfulPaint
                 State.FAILED -> stepFailedPaint
                 State.PENDING -> stepPendingPaint
             }
 
             canvas.drawArc(rectF, start, widthOfEachStep, false, paint)
-            start = start + widthOfEachStep + gapBetweenEachEMI
+
+            start += widthOfEachStep + gapBetweenEachStep
         }
     }
 
-    fun setdata(totalSteps: Int, successfullSteps: Int, failedSteps:Int) {
+    var x: ValueAnimator? = null
+
+    fun setData(totalSteps: Int, successfulSteps: Int, failedSteps:Int) {
         this.totalSteps = totalSteps
-        this.successfullSteps = successfullSteps
+        this.successfulSteps = successfulSteps
         this.failedSteps = failedSteps
         this.pendingSteps = calculatePendingSteps()
         this.widthOfEachStep = calculateWidthOfEachStep()
+
+        x?.cancel()
+        x = ValueAnimator.ofFloat(1f, totalSteps.toFloat()).apply {
+            duration = 300
+            start()
+            this.addUpdateListener {
+
+                val item = (it.animatedValue as Float).toInt()
+                this@MyCustomView.totalSteps = item
+                invalidate()
+            }
+        }
         postInvalidate()
     }
 
-    private fun calculatePendingSteps() = totalSteps - successfullSteps - failedSteps
-    private fun calculateWidthOfEachStep() = (360f / totalSteps) - gapBetweenEachEMI
+    private fun calculatePendingSteps() = totalSteps - successfulSteps - failedSteps
+    private fun calculateWidthOfEachStep() = (360f / totalSteps) - gapBetweenEachStep
 
     /* override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
          super.onMeasure(widthMeasureSpec, heightMeasureSpec)
